@@ -1,28 +1,34 @@
 #!/usr/bin/env node
-import { homedir } from "os";
-import { join } from "path";
-import fs from "fs-extra";
-import chalk from "chalk";
-import inquirer from "inquirer";
-import { Command } from "commander";
-import ora from "ora";
-import Table from "cli-table3";
-export class ClaudeSessionManager {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ClaudeSessionManager = void 0;
+const os_1 = require("os");
+const path_1 = require("path");
+const fs_extra_1 = __importDefault(require("fs-extra"));
+const chalk_1 = __importDefault(require("chalk"));
+const inquirer_1 = __importDefault(require("inquirer"));
+const commander_1 = require("commander");
+const ora_1 = __importDefault(require("ora"));
+const cli_table3_1 = __importDefault(require("cli-table3"));
+class ClaudeSessionManager {
     constructor(sessionId) {
         this.lines = [];
         this.originalContent = "";
         this.sessionId = sessionId;
         const cwdProject = process.cwd().replace(/\//g, '-');
-        this.sessionFile = join(homedir(), ".claude", "projects", cwdProject, `${sessionId}.jsonl`);
-        this.backupDir = join(homedir(), ".claude", "projects", cwdProject, "session-manager-backups");
+        this.sessionFile = (0, path_1.join)((0, os_1.homedir)(), ".claude", "projects", cwdProject, `${sessionId}.jsonl`);
+        this.backupDir = (0, path_1.join)((0, os_1.homedir)(), ".claude", "projects", cwdProject, "session-manager-backups");
     }
     async initialize() {
-        if (!await fs.pathExists(this.sessionFile)) {
+        if (!await fs_extra_1.default.pathExists(this.sessionFile)) {
             throw new Error(`Session file not found: ${this.sessionFile}`);
         }
-        await fs.ensureDir(this.backupDir);
+        await fs_extra_1.default.ensureDir(this.backupDir);
         // Load session
-        this.originalContent = await fs.readFile(this.sessionFile, "utf8");
+        this.originalContent = await fs_extra_1.default.readFile(this.sessionFile, "utf8");
         const rawLines = this.originalContent.split(/\r?\n/);
         // Parse lines - simple and robust
         this.lines = rawLines.map((line, index) => {
@@ -72,7 +78,7 @@ export class ClaudeSessionManager {
         while (running) {
             console.clear();
             this.displayHeader();
-            const { action } = await inquirer.prompt([
+            const { action } = await inquirer_1.default.prompt([
                 {
                     type: 'list',
                     name: 'action',
@@ -115,10 +121,10 @@ export class ClaudeSessionManager {
     }
     displayHeader() {
         const stats = this.getStats();
-        console.log(chalk.bold.cyan('═══════════════════════════════════════════════════════'));
-        console.log(chalk.bold.white(`Session: ${chalk.yellow(this.sessionId)}`));
-        console.log(chalk.white(`Total Lines: ${stats.total} | Messages: ${stats.messages} | Selected: ${stats.selected}`));
-        console.log(chalk.bold.cyan('═══════════════════════════════════════════════════════'));
+        console.log(chalk_1.default.bold.cyan('═══════════════════════════════════════════════════════'));
+        console.log(chalk_1.default.bold.white(`Session: ${chalk_1.default.yellow(this.sessionId)}`));
+        console.log(chalk_1.default.white(`Total Lines: ${stats.total} | Messages: ${stats.messages} | Selected: ${stats.selected}`));
+        console.log(chalk_1.default.bold.cyan('═══════════════════════════════════════════════════════'));
         console.log();
     }
     getStats() {
@@ -138,12 +144,12 @@ export class ClaudeSessionManager {
     async viewMessages() {
         const messages = this.lines.filter(l => l.isMessage);
         if (messages.length === 0) {
-            console.log(chalk.red('\nNo messages found in this session.'));
+            console.log(chalk_1.default.red('\nNo messages found in this session.'));
             await this.pause();
             return;
         }
         // Simple table display
-        const table = new Table({
+        const table = new cli_table3_1.default({
             head: ['ID', 'Type', 'Selected', 'Preview'],
             colWidths: [6, 12, 10, 60],
             wordWrap: true
@@ -153,16 +159,16 @@ export class ClaudeSessionManager {
             table.push([
                 line.index.toString(),
                 this.colorType(line.type || 'unknown'),
-                line.selected ? chalk.green('✓') : chalk.red('✗'),
+                line.selected ? chalk_1.default.green('✓') : chalk_1.default.red('✗'),
                 preview
             ]);
         });
         console.log(table.toString());
-        console.log(chalk.gray(`\nShowing ${messages.length} messages`));
+        console.log(chalk_1.default.gray(`\nShowing ${messages.length} messages`));
         await this.pause();
     }
     async selectMessages() {
-        const { mode } = await inquirer.prompt([
+        const { mode } = await inquirer_1.default.prompt([
             {
                 type: 'list',
                 name: 'mode',
@@ -181,12 +187,12 @@ export class ClaudeSessionManager {
                 break;
             case 'all':
                 this.lines.forEach(l => l.selected = true);
-                console.log(chalk.green('All lines selected'));
+                console.log(chalk_1.default.green('All lines selected'));
                 await this.pause();
                 break;
             case 'none':
                 this.lines.forEach(l => l.selected = false);
-                console.log(chalk.red('All lines deselected'));
+                console.log(chalk_1.default.red('All lines deselected'));
                 await this.pause();
                 break;
             case 'type':
@@ -201,7 +207,7 @@ export class ClaudeSessionManager {
             value: line.index,
             checked: line.selected
         }));
-        const { selected } = await inquirer.prompt([
+        const { selected } = await inquirer_1.default.prompt([
             {
                 type: 'checkbox',
                 name: 'selected',
@@ -219,7 +225,7 @@ export class ClaudeSessionManager {
     }
     async selectByType() {
         const types = Object.keys(this.getStats().byType);
-        const { msgType, action } = await inquirer.prompt([
+        const { msgType, action } = await inquirer_1.default.prompt([
             {
                 type: 'list',
                 name: 'msgType',
@@ -241,13 +247,13 @@ export class ClaudeSessionManager {
                 count++;
             }
         });
-        console.log(chalk[shouldSelect ? 'green' : 'red'](`${action}ed ${count} ${msgType} messages`));
+        console.log(chalk_1.default[shouldSelect ? 'green' : 'red'](`${action}ed ${count} ${msgType} messages`));
         await this.pause();
     }
     async saveChanges() {
         const selectedLines = this.lines.filter(l => l.selected);
-        console.log(chalk.yellow(`\nPreparing to save ${selectedLines.length} lines...`));
-        const { confirm } = await inquirer.prompt([
+        console.log(chalk_1.default.yellow(`\nPreparing to save ${selectedLines.length} lines...`));
+        const { confirm } = await inquirer_1.default.prompt([
             {
                 type: 'confirm',
                 name: 'confirm',
@@ -256,42 +262,42 @@ export class ClaudeSessionManager {
             }
         ]);
         if (!confirm) {
-            console.log(chalk.yellow('Save cancelled'));
+            console.log(chalk_1.default.yellow('Save cancelled'));
             await this.pause();
             return;
         }
-        const spinner = ora('Saving changes...').start();
+        const spinner = (0, ora_1.default)('Saving changes...').start();
         try {
             // Create backup
             const timestamp = new Date().toISOString().replace(/:/g, '-');
-            const backupFile = join(this.backupDir, `${this.sessionId}.${timestamp}.jsonl`);
-            await fs.writeFile(backupFile, this.originalContent);
+            const backupFile = (0, path_1.join)(this.backupDir, `${this.sessionId}.${timestamp}.jsonl`);
+            await fs_extra_1.default.writeFile(backupFile, this.originalContent);
             // Write selected lines
             const output = selectedLines.map(l => l.line).join('\n');
-            await fs.writeFile(this.sessionFile, output);
+            await fs_extra_1.default.writeFile(this.sessionFile, output);
             spinner.succeed('Changes saved successfully!');
-            console.log(chalk.gray(`Backup created: ${backupFile}`));
+            console.log(chalk_1.default.gray(`Backup created: ${backupFile}`));
             // Update original content
             this.originalContent = output;
         }
         catch (error) {
             spinner.fail('Failed to save changes');
-            console.error(chalk.red(error));
+            console.error(chalk_1.default.red(error));
         }
         await this.pause();
     }
     async restoreBackup() {
-        const backups = await fs.readdir(this.backupDir);
+        const backups = await fs_extra_1.default.readdir(this.backupDir);
         const sessionBackups = backups
             .filter(f => f.startsWith(`${this.sessionId}.`))
             .sort()
             .reverse();
         if (sessionBackups.length === 0) {
-            console.log(chalk.yellow('No backups found'));
+            console.log(chalk_1.default.yellow('No backups found'));
             await this.pause();
             return;
         }
-        const { backup } = await inquirer.prompt([
+        const { backup } = await inquirer_1.default.prompt([
             {
                 type: 'list',
                 name: 'backup',
@@ -299,24 +305,24 @@ export class ClaudeSessionManager {
                 choices: sessionBackups.slice(0, 10)
             }
         ]);
-        const spinner = ora('Restoring backup...').start();
+        const spinner = (0, ora_1.default)('Restoring backup...').start();
         try {
-            const backupPath = join(this.backupDir, backup);
-            const content = await fs.readFile(backupPath, 'utf8');
-            await fs.writeFile(this.sessionFile, content);
+            const backupPath = (0, path_1.join)(this.backupDir, backup);
+            const content = await fs_extra_1.default.readFile(backupPath, 'utf8');
+            await fs_extra_1.default.writeFile(this.sessionFile, content);
             spinner.succeed('Backup restored!');
-            console.log(chalk.yellow('Reinitializing session...'));
+            console.log(chalk_1.default.yellow('Reinitializing session...'));
             await this.initialize();
         }
         catch (error) {
             spinner.fail('Restore failed');
-            console.error(chalk.red(error));
+            console.error(chalk_1.default.red(error));
         }
         await this.pause();
     }
     async showStatistics() {
         const stats = this.getStats();
-        const table = new Table();
+        const table = new cli_table3_1.default();
         table.push(['Total Lines', stats.total], ['Messages', stats.messages], ['Selected', stats.selected], ['', ''], ['Message Types', '']);
         Object.entries(stats.byType).forEach(([type, count]) => {
             table.push([`  ${type}`, count]);
@@ -325,7 +331,7 @@ export class ClaudeSessionManager {
         await this.pause();
     }
     async runDiagnostics() {
-        console.log(chalk.bold.cyan('\n=== Session Diagnostics ===\n'));
+        console.log(chalk_1.default.bold.cyan('\n=== Session Diagnostics ===\n'));
         let jsonLines = 0;
         let nonJsonLines = 0;
         let emptyLines = 0;
@@ -343,12 +349,12 @@ export class ClaudeSessionManager {
                 }
             }
         });
-        console.log(chalk.bold('File Statistics:'));
+        console.log(chalk_1.default.bold('File Statistics:'));
         console.log(`  Total lines: ${this.lines.length}`);
-        console.log(`  JSON lines: ${chalk.green(jsonLines)}`);
-        console.log(`  Non-JSON lines: ${chalk.yellow(nonJsonLines)}`);
-        console.log(`  Empty lines: ${chalk.gray(emptyLines)}`);
-        console.log(chalk.bold('\nMessage Types:'));
+        console.log(`  JSON lines: ${chalk_1.default.green(jsonLines)}`);
+        console.log(`  Non-JSON lines: ${chalk_1.default.yellow(nonJsonLines)}`);
+        console.log(`  Empty lines: ${chalk_1.default.gray(emptyLines)}`);
+        console.log(chalk_1.default.bold('\nMessage Types:'));
         Object.entries(this.getStats().byType).forEach(([type, count]) => {
             console.log(`  ${type}: ${count}`);
         });
@@ -364,24 +370,25 @@ export class ClaudeSessionManager {
     }
     colorType(type) {
         const colors = {
-            user: chalk.green,
-            assistant: chalk.blue,
-            message: chalk.blue,
-            system: chalk.yellow
+            user: chalk_1.default.green,
+            assistant: chalk_1.default.blue,
+            message: chalk_1.default.blue,
+            system: chalk_1.default.yellow
         };
-        const color = colors[type] || chalk.gray;
+        const color = colors[type] || chalk_1.default.gray;
         return color(type);
     }
     async pause() {
-        await inquirer.prompt([{
+        await inquirer_1.default.prompt([{
                 type: 'input',
                 name: 'continue',
                 message: 'Press Enter to continue...'
             }]);
     }
 }
+exports.ClaudeSessionManager = ClaudeSessionManager;
 // CLI
-const program = new Command()
+const program = new commander_1.Command()
     .name('claude-session-manager')
     .description('Manage Claude session context by selecting/deselecting messages')
     .version('1.1.0')
@@ -389,14 +396,14 @@ const program = new Command()
     .action(async (sessionId) => {
     try {
         const manager = new ClaudeSessionManager(sessionId);
-        const spinner = ora('Loading session...').start();
+        const spinner = (0, ora_1.default)('Loading session...').start();
         await manager.initialize();
         spinner.succeed('Session loaded');
         await manager.interactiveMenu();
-        console.log(chalk.bold.green('\n✨ Session management complete!'));
+        console.log(chalk_1.default.bold.green('\n✨ Session management complete!'));
     }
     catch (error) {
-        console.error(chalk.red(`Error: ${error}`));
+        console.error(chalk_1.default.red(`Error: ${error}`));
         process.exit(1);
     }
 });
