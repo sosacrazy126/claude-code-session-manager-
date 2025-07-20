@@ -1,0 +1,33 @@
+{
+  "name": "claude-session-manager",
+  "version": "1.1.0",
+  "description": "Manage Claude session context by selecting/deselecting messages",
+  "main": "session-manager-v1.1.js",
+  "type": "module",
+  "bin": {
+    "claude-session-manager": "./session-manager-v1.1.js"
+  },
+  "scripts": {
+    "start": "node session-manager-v1.1.js"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "chalk": "^5.4.1",
+    "commander": "^14.0.0",
+    "fs-extra": "^11.3.0",
+    "ora": "^8.2.0",
+    "inquirer": "^9.2.12",
+    "cli-table3": "^0.6.3"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "session",
+    "context",
+    "management",
+    "jsonl",
+    "cli"
+  ],
+  "author": "Built with Claude",
+  "license": "MIT"
+} 
